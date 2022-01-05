@@ -1,8 +1,7 @@
-import argparse
-
 from model_based import *
 from model_free import *
 from frozen_lake import *
+import argparse
 
 parser = argparse.ArgumentParser(description="run on big or small lake")
 parser.add_argument('--lake', type=str)
