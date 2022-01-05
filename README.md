@@ -1,0 +1,1 @@
+usage: main.py --lake [big|small]
