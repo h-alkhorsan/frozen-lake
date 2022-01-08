@@ -8,82 +8,104 @@ def randomAction(random_state, average_r):
 
 ################ Tabular model-free algorithms ################
 
-def sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
-    random_state = np.random.RandomState(seed)  
-    eta = np.linspace(eta, 0, max_episodes)  
-    epsilon = np.linspace(epsilon, 0, max_episodes) 
 
-    q = np.zeros((env.n_states, env.n_actions)) 
-    t = 0
-    for i in range(max_episodes):
-        s = env.reset() 
+def action_select(Q, epsilon, s):
+    if np.random.random() <= epsilon:
+            return np.random.randint(4)
+    else:
+            return np.random.choice(np.flatnonzero(Q[s, :] == Q[s, :].max()))
 
-        if(t < env.n_actions): 
-            a = t 
-        else:
-            _a = randomAction(random_state, q[s])
 
-            if(random_state.random(1) < epsilon[i]):
-                a = random_state.choice(range(env.n_actions))
-            else:
-                a = _a 
-        t += 1
+# SARSA Process
+def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None):    
+    Q = np.zeros((env.n_states, env.n_actions))
 
-        done = False
-        while not done: 
-            state, R, done = env.step(a)
 
-            if(t < env.n_actions): 
-                action = t 
-            else:
-                _a = randomAction(random_state, q[state])
+    alpha = np.linspace(alpha, 0, n_episodes)
+    epsilon = np.linspace(epsilon, 0, n_episodes)
 
-                if(random_state.random(1) < epsilon[i]):
-                    action = random_state.choice(range(env.n_actions))  
+    for i in range(n_episodes):
+            # initial state
+            s = env.reset()
+            # initial action
+            a = action_select(Q, epsilon[i], s)
+
+            # state_check stores the previous state
+            # overriddes s in the Q calculation when the game
+            # ends
+            state_check = s
+
+            done = False
+            while not done:
+                s_, reward, done = env.step(a)
+
+                # Improvements to the Q matrix that massively improves 
+                # rewards and performance by ending Q in the right 
+                # state to separate reward state and lose state
+                # Comment out this if else statement to return the
+                # expected value matrix.
+                if ((done and reward == 0) or (done and reward == 1)):
+                    #final state updated to correct state
+                    s_ = state_check
                 else:
-                    action = _a  
-            t += 1
+                    state_check = s_
 
-            q[s,a] += eta[i] * (R + gamma * q[state, action] - q[s,a])
-            s = state
-            a = action
+                a_ = action_select(Q, epsilon[i], s_)
+                Q[s, a] += alpha[i] * (reward + (gamma * Q[s_, a_]) - Q[s, a])
+                # update processing bar
+                if done:
+                        break
+                
+                s, a = s_, a_
 
-    policy = q.argmax(axis=1) 
-    value = q.max(axis=1)
+    policy = Q.argmax(axis=1)
+    value = Q.max(axis=1)
 
+    print(policy)
     return policy, value
 
+   
 def q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
-    random_state = np.random.RandomState(seed)  
-    eta = np.linspace(eta, 0, max_episodes) 
-    epsilon = np.linspace(epsilon, 0, max_episodes)  
+    random_state = np.random.RandomState(seed)
+    
+    eta = np.linspace(eta, 0, max_episodes)
+    epsilon = np.linspace(epsilon, 0, max_episodes)
+    
+    Q = np.zeros((env.n_states, env.n_actions))
+    s = env.reset()
 
-    q = np.zeros((env.n_states, env.n_actions)) 
-    t = 0
+    # state_check stores the previous state
+    # overriddes s in the Q calculation when the game
+    # ends
+    state_check = s
+
+    
     for i in range(max_episodes):
-        s = env.reset() 
+        s = env.reset()
         done = False
-        while(not done): 
-
-            if(t < env.n_actions):  
-                a = t  
+        
+        while not done:
+            a = action_select(Q, epsilon[i], s)
+            s_, reward, done = env.step(a)
+            
+            # Improvements to the Q that massively improves 
+            # values and performance by ending Q in the right 
+            # state to separate reward state and lose state
+            # Comment out this if else statement to return the
+            # expected value matrix.
+            if ((done and reward == 0) or (done and reward == 1)):
+                #final state updated to correct state
+                s_ = state_check
             else:
-                _a = randomAction(random_state, q[s])
-
-                if(random_state.random(1) < epsilon[i]):
-                    a = random_state.choice(range(env.n_actions))  
-                else:
-                    a = _a 
-            t += 1
-
-            state, r, done = env.step(a) 
-
-            q_max = max(q[state])  
-            q[s,a] += eta[i] * (r + gamma * q_max - q[s,a])
-            s = state
-    policy = q.argmax(axis=1) 
-    value = q.max(axis=1)
-
+                state_check = s_
+            
+            Q[s][a] = Q[s][a] + eta[i] * ((reward+gamma*Q[s_][np.random.choice(np.flatnonzero(Q[s_, :] == Q[s_, :].max()))]) - Q[s][a])
+            s = s_
+            
+        
+    policy = Q.argmax(axis=1)
+    value = Q.max(axis=1)
+   
     return policy, value
 
 ################ Non-tabular model-free algorithms ################
