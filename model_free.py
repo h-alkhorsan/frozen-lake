@@ -2,124 +2,88 @@ import numpy as np
 from numpy.core.fromnumeric import argmax
 from frozen_lake import *
 
+def randomAction(random_state, average_r):
+    actions = np.array(np.argwhere(average_r == np.amax(average_r))).flatten()
+    return random_state.choice(actions, 1)[0]  
+
 ################ Tabular model-free algorithms ################
 
-# epsilon-greedy exploration strategy
-def epsilon_greedy(Q, epsilon, s):
-    """
-    Q: Q Table
-    epsilon: exploration parameter
-    s: state
-    """
-    # selects a random action with probability epsilon
-    if np.random.random() <= epsilon:
-            return np.random.randint(4)
-    else:
-            return np.random.choice(np.flatnonzero(Q[s, :] == Q[s, :].max()))
+def sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
+    random_state = np.random.RandomState(seed)  
+    eta = np.linspace(eta, 0, max_episodes)  
+    epsilon = np.linspace(epsilon, 0, max_episodes) 
 
-# SARSA Process
-def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None): 
-    """
-    alpha: learning rate
-    gamma: exploration parameter
-    n_episodes: number of episodes
-    """
-    
-    # initialize Q table
-    
-    Q = np.zeros((env.n_states, env.n_actions))
+    q = np.zeros((env.n_states, env.n_actions)) 
+    t = 0
+    for i in range(max_episodes):
+        s = env.reset() 
 
-    step = 0
+        if(t < env.n_actions): 
+            a = t 
+        else:
+            _a = randomAction(random_state, q[s])
 
-    alpha = np.linspace(alpha, 0, n_episodes)
-    epsilon = np.linspace(epsilon, 0, n_episodes)
+            if(random_state.random(1) < epsilon[i]):
+                a = random_state.choice(range(env.n_actions))
+            else:
+                a = _a 
+        t += 1
 
+        done = False
+        while not done: 
+            state, R, done = env.step(a)
 
-    # initialize processing bar
-    # to record reward for each episode
-    reward_array = np.zeros(n_episodes)
-    for i in range(n_episodes):
-            # initial state
-            s = env.reset()
-            # initial action
-            a = epsilon_greedy(Q, epsilon[i], s)
-            state_check = s
-            step = 0
+            if(t < env.n_actions): 
+                action = t 
+            else:
+                _a = randomAction(random_state, q[state])
 
-            done = False
-            while not done:
-                s_, reward, done = env.step(a)
-
-                if ((done and reward == 0) or (done and reward == 1)):
-                    #final state updated
-                    s_ = state_check
+                if(random_state.random(1) < epsilon[i]):
+                    action = random_state.choice(range(env.n_actions))  
                 else:
-                    state_check = s_
+                    action = _a  
+            t += 1
 
-                a_ = epsilon_greedy(Q, epsilon[i], s_)
+            q[s,a] += eta[i] * (R + gamma * q[state, action] - q[s,a])
+            s = state
+            a = action
 
-
-                Q[s, a] += alpha[i] * (reward + (gamma * Q[s_, a_]) - Q[s, a])
-                # update processing bar
-                if done:
-                        reward_array[i] = reward
-                        break
-                
-                step+=1
-                s, a = s_, a_
-    # show Q table
-    print('Trained Q Table:')
-    print(Q)
-    # show average reward
-    avg_reward = round(np.mean(reward_array), 4)
-    print('Training Averaged reward per episode {}'.format(avg_reward))
-
-    policy = Q.argmax(axis=1)
-
-    print(policy)
-
-    value = Q.max(axis=1)
+    policy = q.argmax(axis=1) 
+    value = q.max(axis=1)
 
     return policy, value
-    
+
 def q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
-    random_state = np.random.RandomState(seed)
-    
-    eta = np.linspace(eta, 0, max_episodes)
-    epsilon = np.linspace(epsilon, 0, max_episodes)
-    
-    Q = np.zeros((env.n_states, env.n_actions))
-    s = env.reset()
+    random_state = np.random.RandomState(seed)  
+    eta = np.linspace(eta, 0, max_episodes) 
+    epsilon = np.linspace(epsilon, 0, max_episodes)  
 
-    state_check = s
-
-    
+    q = np.zeros((env.n_states, env.n_actions)) 
+    t = 0
     for i in range(max_episodes):
-        s = env.reset()
+        s = env.reset() 
         done = False
-        
-        while not done:
-            a = epsilon_greedy(Q, epsilon[i], s)
-            s_, reward, done = env.step(a)
+        while(not done): 
 
-            
-            if ((done and reward == 0) or (done and reward == 1)):
-                #final state updated
-                s_ = state_check
+            if(t < env.n_actions):  
+                a = t  
             else:
-                state_check = s_
-            
-            Q[s][a] = Q[s][a] + eta[i] * ((reward+gamma*Q[s_][np.random.choice(np.flatnonzero(Q[s_, :] == Q[s_, :].max()))]) - Q[s][a])
-            s = s_
-            
-        
-    policy = Q.argmax(axis=1)
-    value = Q.max(axis=1)
+                _a = randomAction(random_state, q[s])
 
-    print(policy)
-    print(value)
-    print(Q)
-        
+                if(random_state.random(1) < epsilon[i]):
+                    a = random_state.choice(range(env.n_actions))  
+                else:
+                    a = _a 
+            t += 1
+
+            state, r, done = env.step(a) 
+
+            q_max = max(q[state])  
+            q[s,a] += eta[i] * (r + gamma * q_max - q[s,a])
+            s = state
+    policy = q.argmax(axis=1) 
+    value = q.max(axis=1)
+
     return policy, value
 
 ################ Non-tabular model-free algorithms ################
@@ -170,51 +134,85 @@ def make_epsilon_greedy_policy(estimator, epsilon, nA):
     def policy_fn(observation):
         A = np.ones(nA, dtype=float) * epsilon / nA
         q_values = estimator.predict(observation)
-        best_action = np.argmax(q_values)
-        A[best_action] += (1.0 - epsilon)
+        _a = np.argmax(q_values)
+        A[_a] += (1.0 - epsilon)
         return A
     return policy_fn
 
 
 def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
     random_state = np.random.RandomState(seed)
-    
+
     eta = np.linspace(eta, 0, max_episodes)
     epsilon = np.linspace(epsilon, 0, max_episodes)
-    estimator = LinearWrapper(env)
-    done = False
-    
+
     theta = np.zeros(env.n_features)
-    
+
     for i in range(max_episodes):
         features = env.reset()
-        policy = make_epsilon_greedy_policy(estimator, epsilon[i] * eta[i], env.n_actions)
 
         q = features.dot(theta)
 
-        # TODO:
-    
+        if random_state.rand() < epsilon[i]:
+            a = random_state.choice(env.n_actions)
+        else:
+            q_max = max(q)
+            best = [a for a in range(env.n_actions) if np.allclose(q_max, q[a])]
+            a = random_state.choice(best)
+
+        done = False
+        while not done:
+            _features, R, done = env.step(a)
+
+            _q = _features.dot(theta)
+
+            if random_state.rand() < epsilon[i]:
+                next_action = random_state.choice(env.n_actions)
+            else:
+                q_max = max(_q)
+                best = [na for na in range(env.n_actions) if np.allclose(q_max, _q[na])]
+                next_action = random_state.choice(best)
+
+            D = R + gamma*_q[next_action] - q[a]
+            theta = theta + eta[i]*D*features[a]
+
+            features = _features
+            q = features.dot(theta)
+            a = next_action
+
     return theta
     
 def linear_q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
-    random_state = np.random.RandomState(seed)
-    
-    eta = np.linspace(eta, 0, max_episodes)
-    epsilon = np.linspace(epsilon, 0, max_episodes)
-    
-    theta = np.zeros(env.n_features)
-    estimator = LinearWrapper(env)
-    done = False
+    random_state = np.random.RandomState(seed) 
+    eta = np.linspace(eta, 0, max_episodes) 
+    epsilon = np.linspace(epsilon, 0, max_episodes) 
 
+    theta = np.zeros(env.n_features) 
+    t = 0
     for i in range(max_episodes):
-        features = env.reset()
-        policy = make_epsilon_greedy_policy(estimator, epsilon[i] * eta[i], env.n_actions)
+        features = env.reset() 
+        q = features.dot(theta) 
 
-        # while not done:
+        done = False
+        while not done: 
 
+            if t < env.n_actions: 
+                a = t 
+            else:
+                _a = randomAction(random_state, q)
 
+                if random_state.random(1) < epsilon[i]:
+                    a = random_state.choice(range(env.n_actions))
+                else:
+                    a = _a
+            t += 1
 
-        
-        # TODO:
+            _features, r, done = env.step(a)
+            delta = r - q[a] 
+            q = _features.dot(theta)
+            delta += (gamma * max(q)) 
+            theta += eta[i] * delta * features[a] 
+            features = _features
 
-    return theta    
+    return theta
+
