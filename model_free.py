@@ -1,88 +1,8 @@
 import numpy as np
 from numpy.core.fromnumeric import argmax
 from frozen_lake import *
-import sys
-import gym
-
 
 ################ Tabular model-free algorithms ################
-
-# def sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
-
-#     eta = 0.1
-#     epsilon = 0.5
-#     max_episodes = 2000
-#     gamma = 0.9
-
-#     random_state = np.random.RandomState(seed)
-    
-#     # eta = np.linspace(eta, 0, max_episodes)
-#     # epsilon = np.linspace(epsilon, 0, max_episodes)
-
-#     reward = 0
-#     s = env.reset()
-
-    
-#     q = np.zeros((env.n_states, env.n_actions))
-
-#     state2,reward, done = env.step(2)
-
-
-#     env.render()
-
-
-#     for i in range(max_episodes):
-#         s = env.reset()
-#         # TODO:
-#         action1 = action_select(s, epsilon, q)
-#         done = False
-#         while not done:
-
-#             state2, reward, done = env.step(action1)
-
-#             # env.render()
-#             action2 = action_select(state2, epsilon, q)
-
-#             # q = update(s, state2, reward,action1,action2, eta[i], gamma, q)
-#             q[s,action1] += eta * (reward + (gamma * q[state2, action2]) - q[s,action1])
-
-#             if done:
-#                 env.render
-#                 reward += 1
-#                 break
-
-#             s, action1 = state2, action2
-    
-
-
-#     policy = q.argmax(axis=1)
-#     value = q.max(axis=1)
-
-        
-#     #Evaluating the performance
-#     print ("Performance : ", reward/max_episodes)
-    
-#     #Visualizing the Q-matrix
-#     print(q)
-
-
-#     return policy, value
-
-def action_select(state, epsilon, q):
-
-    if np.random.random() < epsilon:
-        return np.random.randint(0,4)
-    else:
-        action = np.argmax(q[state,:])
-        return action
-
-# def update(state1, state2, reward, action1, action2, eta, gamma, q):
-#     predict = q[state1,action1]
-#     target = reward + gamma * q[state2, action2]
-#     q[state1,action1] =  q[state1,action1] + eta * (target - predict)
-    
-
-#     return q
 
 # epsilon-greedy exploration strategy
 def epsilon_greedy(Q, epsilon, s):
@@ -104,11 +24,8 @@ def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None):
     gamma: exploration parameter
     n_episodes: number of episodes
     """
-
-    # #env = gym.make('FrozenLake-v1')
     
     # initialize Q table
-    # #Q = np.zeros((env.observation_space.n, env.action_space.n))
     
     Q = np.zeros((env.n_states, env.n_actions))
 
@@ -132,23 +49,15 @@ def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None):
             done = False
             while not done:
                 s_, reward, done = env.step(a)
-                #s_, reward, done, _ = env.step(a)
 
                 if ((done and reward == 0) or (done and reward == 1)):
                     #final state updated
                     s_ = state_check
-                    print('finished: end state: {}'.format(s_))
-                    if(s_ == 0):
-                        env.render()
                 else:
                     state_check = s_
 
                 a_ = epsilon_greedy(Q, epsilon[i], s_)
 
-                # print('---------------')
-
-                # print('s_: {}, a: {}, reward: {}, done: {}'.format(s_, a, reward, done))
-                # env.render()
 
                 Q[s, a] += alpha[i] * (reward + (gamma * Q[s_, a_]) - Q[s, a])
                 # update processing bar
@@ -172,14 +81,6 @@ def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None):
     value = Q.max(axis=1)
 
     return policy, value
-
-
-
-
-
-
-
-
     
 def q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
     random_state = np.random.RandomState(seed)
@@ -187,14 +88,37 @@ def q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
     eta = np.linspace(eta, 0, max_episodes)
     epsilon = np.linspace(epsilon, 0, max_episodes)
     
-    q = np.zeros((env.n_states, env.n_actions))
+    Q = np.zeros((env.n_states, env.n_actions))
+    s = env.reset()
+
+    state_check = s
+
     
     for i in range(max_episodes):
         s = env.reset()
-        # TODO:
+        done = False
         
-    policy = q.argmax(axis=1)
-    value = q.max(axis=1)
+        while not done:
+            a = epsilon_greedy(Q, epsilon[i], s)
+            s_, reward, done = env.step(a)
+
+            
+            if ((done and reward == 0) or (done and reward == 1)):
+                #final state updated
+                s_ = state_check
+            else:
+                state_check = s_
+            
+            Q[s][a] = Q[s][a] + eta[i] * ((reward+gamma*Q[s_][np.random.choice(np.flatnonzero(Q[s_, :] == Q[s_, :].max()))]) - Q[s][a])
+            s = s_
+            
+        
+    policy = Q.argmax(axis=1)
+    value = Q.max(axis=1)
+
+    print(policy)
+    print(value)
+    print(Q)
         
     return policy, value
 

@@ -60,17 +60,17 @@ def main():
     eta = 0.5
     epsilon = 0.5
     
-    print('')
-    
-    print('## Sarsa')
-    policy, value = sarsa(env, max_episodes, eta, gamma, epsilon, seed=seed)
-    env.render(policy, value)
-    
     # print('')
     
-    # print('## Q-learning')
-    # policy, value = q_learning(env, max_episodes, eta, gamma, epsilon, seed=seed)
+    # print('## Sarsa')
+    # policy, value = sarsa(env, max_episodes, eta, gamma, epsilon, seed=seed)
     # env.render(policy, value)
+    
+    print('')
+    
+    print('## Q-learning')
+    policy, value = q_learning(env, max_episodes, eta, gamma, epsilon, seed=seed)
+    env.render(policy, value)
     
     # print('')
     
