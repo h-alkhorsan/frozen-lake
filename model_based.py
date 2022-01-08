@@ -28,7 +28,8 @@ def policy_improvement(env, policy, value, gamma):
     else:
         policy = np.array(policy, dtype=int) 
 
-    stable = True 
+    stable = True
+     
     for state in range(env.n_states): 
         current = policy[state] 
 
