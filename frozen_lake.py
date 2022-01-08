@@ -33,7 +33,6 @@ class FrozenLake(Environment):
         n_states = self.lake.size + 1
         n_actions = 4
         
-        self.columns = self.lake.shape[1]
         pi = np.zeros(n_states, dtype=float)
         pi[np.where(self.lake_flat == '&')[0]] = 1.0
         
