@@ -164,17 +164,32 @@ class LinearWrapper:
     def render(self, policy=None, value=None):
         self.env.render(policy, value)
         
+
+def make_epsilon_greedy_policy(estimator, epsilon, nA):
+    
+    def policy_fn(observation):
+        A = np.ones(nA, dtype=float) * epsilon / nA
+        q_values = estimator.predict(observation)
+        best_action = np.argmax(q_values)
+        A[best_action] += (1.0 - epsilon)
+        return A
+    return policy_fn
+
+
 def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
     random_state = np.random.RandomState(seed)
     
     eta = np.linspace(eta, 0, max_episodes)
     epsilon = np.linspace(epsilon, 0, max_episodes)
+    estimator = LinearWrapper(env)
+    done = False
     
     theta = np.zeros(env.n_features)
     
     for i in range(max_episodes):
         features = env.reset()
-        
+        policy = make_epsilon_greedy_policy(estimator, epsilon[i] * eta[i], env.n_actions)
+
         q = features.dot(theta)
 
         # TODO:
@@ -188,9 +203,17 @@ def linear_q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
     epsilon = np.linspace(epsilon, 0, max_episodes)
     
     theta = np.zeros(env.n_features)
-    
+    estimator = LinearWrapper(env)
+    done = False
+
     for i in range(max_episodes):
         features = env.reset()
+        policy = make_epsilon_greedy_policy(estimator, epsilon[i] * eta[i], env.n_actions)
+
+        # while not done:
+
+
+
         
         # TODO:
 
