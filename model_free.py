@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.core.fromnumeric import argmax
+from model_based import policy_evaluation, policy_improvement
 from frozen_lake import *
 
 def randomAction(random_state, average_r):
@@ -17,14 +18,14 @@ def action_select(Q, epsilon, s):
 
 
 # SARSA Process
-def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None):    
+def sarsa(env, max_episodes, alpha , gamma, epsilon, seed=None):    
     Q = np.zeros((env.n_states, env.n_actions))
 
 
-    alpha = np.linspace(alpha, 0, n_episodes)
-    epsilon = np.linspace(epsilon, 0, n_episodes)
+    alpha = np.linspace(alpha, 0, max_episodes)
+    epsilon = np.linspace(epsilon, 0, max_episodes)
 
-    for i in range(n_episodes):
+    for i in range(max_episodes):
             # initial state
             s = env.reset()
             # initial action
@@ -35,22 +36,25 @@ def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None):
             # ends
             state_check = s
 
+
             done = False
             while not done:
                 s_, reward, done = env.step(a)
 
-                # Improvements to the Q matrix that massively improves 
-                # rewards and performance by ending Q in the right 
-                # state to separate reward state and lose state
-                # Comment out this if else statement to return the
-                # expected value matrix.
-                if ((done and reward == 0) or (done and reward == 1)):
-                    #final state updated to correct state
-                    s_ = state_check
-                else:
-                    state_check = s_
+                # # Improvements to the Q matrix that improves 
+                # # rewards by ending Q in the right 
+                # # state to separate reward state and lose state
+                # # Comment out this if else statement to return the
+                # # expected value matrix.
+                # if ((done and reward == 0) or (done and reward == 1)):
+                #     #final state updated to correct state
+                #     s_ = state_check
+                # else:
+                #     state_check = s_
 
                 a_ = action_select(Q, epsilon[i], s_)
+
+
                 Q[s, a] += alpha[i] * (reward + (gamma * Q[s_, a_]) - Q[s, a])
                 # update processing bar
                 if done:
@@ -58,10 +62,11 @@ def sarsa(env, n_episodes,alpha , gamma, epsilon, seed=None):
                 
                 s, a = s_, a_
 
+            env.reset()
+
     policy = Q.argmax(axis=1)
     value = Q.max(axis=1)
 
-    print(policy)
     return policy, value
 
    
@@ -88,21 +93,21 @@ def q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
             a = action_select(Q, epsilon[i], s)
             s_, reward, done = env.step(a)
             
-            # Improvements to the Q that massively improves 
-            # values and performance by ending Q in the right 
-            # state to separate reward state and lose state
-            # Comment out this if else statement to return the
-            # expected value matrix.
-            if ((done and reward == 0) or (done and reward == 1)):
-                #final state updated to correct state
-                s_ = state_check
-            else:
-                state_check = s_
+            # # Improvements to the Q that improves the 
+            # # values and performance by ending Q in the right 
+            # # state to separate reward state and lose state
+            # # Comment out this if else statement to return the
+            # # expected value matrix.
+            # if ((done and reward == 0) or (done and reward == 1)):
+            #     #final state updated to correct state
+            #     s_ = state_check
+            # else:
+            #     state_check = s_
             
             Q[s][a] = Q[s][a] + eta[i] * ((reward+gamma*Q[s_][np.random.choice(np.flatnonzero(Q[s_, :] == Q[s_, :].max()))]) - Q[s][a])
             s = s_
             
-        
+    
     policy = Q.argmax(axis=1)
     value = Q.max(axis=1)
    
@@ -174,6 +179,7 @@ def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
         features = env.reset()
 
         q = features.dot(theta)
+        print(q)
 
         if random_state.rand() < epsilon[i]:
             a = random_state.choice(env.n_actions)
