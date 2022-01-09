@@ -1,11 +1,7 @@
 import numpy as np
 from numpy.core.fromnumeric import argmax
 from model_based import policy_evaluation, policy_improvement
-from frozen_lake import *
-
-def randomAction(random_state, average_r):
-    actions = np.array(np.argwhere(average_r == np.amax(average_r))).flatten()
-    return random_state.choice(actions, 1)[0]  
+from frozen_lake import * 
 
 ################ Tabular model-free algorithms ################
 
@@ -115,6 +111,10 @@ def q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
 
 ################ Non-tabular model-free algorithms ################
 
+def randomAction(random_state, average_r):
+    actions = np.array(np.argwhere(average_r == np.amax(average_r))).flatten()
+    return random_state.choice(actions, 1)[0] 
+
 class LinearWrapper:
     def __init__(self, env):
         self.env = env
@@ -179,7 +179,6 @@ def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
         features = env.reset()
 
         q = features.dot(theta)
-        print(q)
 
         if random_state.rand() < epsilon[i]:
             a = random_state.choice(env.n_actions)
